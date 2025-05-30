@@ -19,8 +19,15 @@ namespace NetFixer.Plugins.Dns
             int googleAvg = await GetPingAverageAsync("8.8.8.8", log);
             int cloudflareAvg = await GetPingAverageAsync("1.1.1.1", log);
 
-            log.Info($"Google DNS ping avg: {googleAvg} ms");
-            log.Info($"Cloudflare DNS ping avg: {cloudflareAvg} ms");
+            if (googleAvg == int.MaxValue && cloudflareAvg == int.MaxValue)
+            {
+                log.Error("Не удалось получить ping ни для Google, ни для Cloudflare. Используем Google по умолчанию.");
+
+                return "Google";
+            }
+
+            log.Info($"Google DNS ping avg: {(googleAvg == int.MaxValue ? "недоступен" : googleAvg + " ms")}");
+            log.Info($"Cloudflare DNS ping avg: {(cloudflareAvg == int.MaxValue ? "недоступен" : cloudflareAvg + " ms")}");
 
             if (googleAvg < cloudflareAvg) return "Google";
             if (cloudflareAvg < googleAvg) return "Cloudflare";
@@ -32,9 +39,24 @@ namespace NetFixer.Plugins.Dns
         {
             var result = await CommandExecutor.ExecuteAsync($"ping -n 3 {ip}", log);
 
-            var match = Regex.Match(result.Output, @"Среднее\s*=\s*(\d+)\s*мсек", RegexOptions.IgnoreCase);
-            if (match.Success && int.TryParse(match.Groups[1].Value, out int avg))
-                return avg;
+            if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.Output))
+            {
+                log.Error($"Не удалось выполнить ping до {ip}");
+
+                return int.MaxValue;
+            }
+
+            string output = result.Output;
+
+            var matchEn = Regex.Match(output, @"Average\s*=\s*(\d+)", RegexOptions.IgnoreCase);
+            if (matchEn.Success && int.TryParse(matchEn.Groups[1].Value, out int avgEn))
+                return avgEn;
+
+            var matchRu = Regex.Match(output, @"Средн[ее]*\s*=\s*(\d+)", RegexOptions.IgnoreCase);
+            if (matchRu.Success && int.TryParse(matchRu.Groups[1].Value, out int avgRu))
+                return avgRu;
+
+            log.Error($"Не удалось извлечь среднее значение пинга из ответа ping до {ip}");
 
             return int.MaxValue;
         }

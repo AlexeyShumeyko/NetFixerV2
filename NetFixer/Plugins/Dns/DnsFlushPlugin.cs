@@ -1,6 +1,5 @@
 ﻿using NetFixer.Interfaces;
 using NetFixer.Utils;
-using System.Diagnostics;
 
 namespace NetFixer.Plugins.Dns
 {

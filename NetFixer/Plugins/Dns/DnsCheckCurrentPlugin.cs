@@ -1,5 +1,4 @@
 ﻿using NetFixer.Interfaces;
-using NetFixer.Utils;
 
 namespace NetFixer.Plugins.Dns
 {
@@ -24,16 +23,7 @@ namespace NetFixer.Plugins.Dns
 
         public async Task<List<string>> GetCurrentDnsAsync(ILog log)
         {
-            log.Info("Получение текущих настроек DNS");
-
-            var result = await CommandExecutor.ExecuteAsync("netsh interface ip show config", log);
-
-            return result.Output
-                .Split('\n')
-                .Where(l => l.Contains("DNS-"))
-                .Select(l => l.Trim().Split(':').Last().Trim())
-                .Where(ip => !string.IsNullOrWhiteSpace(ip))
-                .ToList();
+            return await DnsUtils.GetCurrentDnsAsync(log, onlyNonGoogleCloudflare: true);
         }
     }
 }

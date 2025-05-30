@@ -22,6 +22,7 @@ namespace NetFixer.Plugins.Dns
             foreach (var domain in _domain)
             {
                 var result = await CommandExecutor.ExecuteAsync($"nslookup {domain}", log);
+
                 if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Output))
                     log.Success($"Резолвинг успешен: {domain}");
                 else

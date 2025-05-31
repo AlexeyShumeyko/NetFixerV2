@@ -1,5 +1,4 @@
 ﻿using NetFixer.Interfaces;
-using NetFixer.Logging;
 using System.Diagnostics;
 using System.Text;
 
@@ -19,23 +18,23 @@ namespace NetFixer.Utils
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
-            var psi = new ProcessStartInfo("cmd.exe", $"/c {command}")
+            var psi = new ProcessStartInfo("cmd.exe", $"/c chcp 65001 > nul && {command}")
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
             };
-
-            psi.StandardOutputEncoding = Encoding.GetEncoding("cp866");
-            psi.StandardErrorEncoding = Encoding.GetEncoding("cp866");
 
             var process = new Process { StartInfo = psi };
             process.Start();
 
             var output = await process.StandardOutput.ReadToEndAsync();
             var error = await process.StandardError.ReadToEndAsync();
-            process.WaitForExit();
+
+            await process.WaitForExitAsync();
 
             var result = new CommandResult
             {
@@ -45,6 +44,7 @@ namespace NetFixer.Utils
             };
 
             log.Command(command, result.Output, result.Error, result.ExitCode);
+
             return result;
         }
     }

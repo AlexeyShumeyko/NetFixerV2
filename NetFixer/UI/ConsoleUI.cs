@@ -1,5 +1,4 @@
 ﻿using NetFixer.Core;
-using NetFixer.Interfaces;
 using NetFixer.Logging;
 using Spectre.Console;
 
@@ -7,90 +6,77 @@ namespace NetFixer.UI
 {
     public static class ConsoleUI
     {
-        public static async Task ShowMainMenu()
+        public static async Task RunAutomatedDiagnostics()
         {
-            var plugins = PluginManager.GetPlugins();
-            bool exit = false;
+            var mainColor = Color.SteelBlue1;
+            var disabledColor = Color.Grey;
 
-            while (!exit)
-            {
-                Console.Clear();
-                AnsiConsole.MarkupLine("[bold aqua]NetFix Tool[/]");
-                AnsiConsole.MarkupLine("Пользуясь программой, вы соглашаетесь с условиями [underline green]Пользовательского соглашения[/].");
-                AnsiConsole.WriteLine(new string('-', 100));
-
-                var choices = new List<string>
-                {
-                    "Полная проверка (рекомендуется)"
-                };
-
-                choices.AddRange(plugins.Select(p => p.Name));
-
-                choices.Add("Пользовательское соглашение");
-                choices.Add("Выход");
-
-                var choice = AnsiConsole.Prompt(
-                new SelectionPrompt<string>()
-                    .Title("Выберите действие:")
-                    .HighlightStyle("yellow")
-                    .PageSize(10)
-                    .AddChoices(choices)
-                );
-
-                if (choice == "Выход")
-                    exit = true;
-                else if (choice == "Пользовательское соглашение")
-                    ShowAgreement();
-                else if (choice == "Полная проверка (рекомендуется)")
-                {
-                    await RunPluginsSequentially(plugins);
-                    AnsiConsole.WriteLine(new string('-', 100));
-                }
-                else
-                {
-                    var selectedPlugin = plugins.First(p => p.Name == choice);
-                    await ExecutePlugin(selectedPlugin);
-                    AnsiConsole.WriteLine(new string('-', 100));
-                }
-
-                AnsiConsole.MarkupLine("[grey]Нажмите любую клавишу для возврата в меню...[/]");
-                Console.ReadKey(true);
-            }
-        }
-
-        private static void ShowAgreement()
-        {
             Console.Clear();
+            RenderMainInterface.MainInterface();
 
-            if (File.Exists("Agreement.txt"))
-                Console.WriteLine(File.ReadAllText("Agreement.txt"));
-            else
-                Console.WriteLine("Agreement.txt не найден.");
-        }
-
-        private static async Task RunPluginsSequentially(IEnumerable<INetFixPlugin> plugins)
-        {
             var logger = new CombinedLogHandler(new PrettyConsoleLogHandler(), new FileLogHandler());
+            var plugins = PluginManager.GetPlugins();
 
-            foreach (var plugin in plugins)
-            {
-                logger.Info($"Выполнение: {plugin.Name}");
+            await AnsiConsole.Progress()
+                .Columns(
+                [
+                    new TaskDescriptionColumn(),
+                    new ConditionalProgressBarColumn(),
+                    new ConditionalPercentageColumn(),
+                    new SpinnerColumn()
+                ])
+                .StartAsync(async ctx =>
+                {
+                    var dummy = ctx.AddTask("[black on black]HIDDEN_TASK[/]", autoStart: true, maxValue: 1);
+                    dummy.StopTask();
 
-                await plugin.ExecuteAsync(logger, CancellationToken.None);
+                    var mainTask = ctx.AddTask("[grey]Выполнение диагностики[/]", maxValue: plugins.Count);
 
-                logger.SaveToFile();
-            }
-        }
+                    foreach (var plugin in plugins)
+                    {
+                        var pluginTask = ctx.AddTask($"[grey]{plugin.Name}[/]", maxValue: 1);
 
-        private static async Task ExecutePlugin(INetFixPlugin plugin)
-        {
-            var logger = new CombinedLogHandler(new PrettyConsoleLogHandler(), new FileLogHandler());
+                        try
+                        {
+                            logger.Info($"Запуск: {plugin.Name}");
 
-            logger.Info($"Выполнение: {plugin.Name}");
+                            var run = Task.Run(async () =>
+                            {
+                                await plugin.ExecuteAsync(logger, CancellationToken.None);
+                            });
 
-            await plugin.ExecuteAsync(logger, CancellationToken.None);
+                            while (!run.IsCompleted)
+                            {
+                                await Task.Delay(200);
+                                pluginTask.Increment(0.01);
+                            }
 
-            logger.SaveToFile();
+                            await run;
+
+                            pluginTask.Value = 1;
+                            pluginTask.Description($"[green]{plugin.Name}[/]");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.Error($"Ошибка в плагине {plugin.Name}: {ex.Message}");
+                            pluginTask.Description($"[red]{plugin.Name}[/]");
+                        }
+                        finally
+                        {
+                            pluginTask.StopTask();
+                            mainTask.Increment(1);
+                            logger.SaveToFile();
+                        }
+                    }
+
+                    mainTask.Description("[green]Выполнение диагностики[/]");
+                });
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.Write(new Rule("[green]Диагностика завершена[/]") { Style = Style.Parse("green dim") });
+            AnsiConsole.MarkupLine("\n[grey]Результаты сохранены в лог-файл[/]");
+            AnsiConsole.MarkupLine("[grey]Нажмите любую клавишу для выхода...[/]");
+            Console.ReadKey(true);
         }
     }
 }

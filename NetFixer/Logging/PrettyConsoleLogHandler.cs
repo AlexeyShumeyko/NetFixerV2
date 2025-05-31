@@ -7,35 +7,23 @@ namespace NetFixer.Logging
     {
         public void Info(string message)
         {
-            AnsiConsole.MarkupLine($"[grey][[INFO]][/] {message}");
+            AnsiConsole.MarkupLine($"[grey][[INFO]][/] {Markup.Escape(message)}");
         }
 
         public void Success(string message)
         {
-            AnsiConsole.MarkupLine($"[green][[SUCCESS]] {message}[/]");
+            AnsiConsole.MarkupLine($"[green][[SUCCESS]] {Markup.Escape(message)}[/]");
             AnsiConsole.MarkupLine("");
         }
 
         public void Error(string message)
         {
-            AnsiConsole.MarkupLine($"[red][[ERROR]] {message}[/]");
+            AnsiConsole.MarkupLine($"[red][[ERROR]] {Markup.Escape(message)}[/]");
         }
 
         public void Command(string command, string output, string error, int exitCode)
         {
-            AnsiConsole.MarkupLine($"\n[mediumpurple1][[COMMAND]] {command}[/]");
-
-            //var result = "Успешно";
-
-            //if (exitCode == 1)
-            //{
-            //    result = "Ошибка";
-            //    AnsiConsole.MarkupLine($"[red][[RESULT]] {result}[/]");
-            //}
-            //else
-            //{
-            //    AnsiConsole.MarkupLine($"[green][[RESULT]] {result}[/]");
-            //}
+            AnsiConsole.MarkupLine($"\n[mediumpurple1][[COMMAND]] {Markup.Escape(command)}[/]");
 
             if (!string.IsNullOrWhiteSpace(output))
             {
@@ -53,8 +41,6 @@ namespace NetFixer.Logging
                 }
             }
 
-            //if (!string.IsNullOrWhiteSpace(output))
-            //    AnsiConsole.MarkupLine($"[white][[STDOUT]] {Markup.Escape(output)}[/]");
             if (!string.IsNullOrWhiteSpace(error))
                 AnsiConsole.MarkupLine($"[red][[STDERR]] {Markup.Escape(error)}[/]");
         }

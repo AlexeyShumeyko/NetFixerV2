@@ -16,49 +16,66 @@ namespace NetFixer.Plugins.Dns
 
         public async Task<string> GetBestDnsAsync(ILog log)
         {
-            int googleAvg = await GetPingAverageAsync("8.8.8.8", log);
-            int cloudflareAvg = await GetPingAverageAsync("1.1.1.1", log);
+            var googleResult = await GetPingResultAsync("8.8.8.8", log);
+            var cloudflareResult = await GetPingResultAsync("1.1.1.1", log);
 
-            if (googleAvg == int.MaxValue && cloudflareAvg == int.MaxValue)
+            if (googleResult.PacketLoss >= 100 && cloudflareResult.PacketLoss >= 100)
             {
-                log.Error("Не удалось получить ping ни для Google, ни для Cloudflare. Используем Google по умолчанию.");
-
-                return "Google";
+                log.Error("Оба DNS недоступны (100% потерь). Оставляем текущие DNS без изменений.");
+                return null;
             }
 
-            log.Info($"Google DNS ping avg: {(googleAvg == int.MaxValue ? "недоступен" : googleAvg + " ms")}");
-            log.Info($"Cloudflare DNS ping avg: {(cloudflareAvg == int.MaxValue ? "недоступен" : cloudflareAvg + " ms")}");
+            log.Info($"Google DNS — Потери: {googleResult.PacketLoss}%, Пинг: {googleResult.AveragePing} мс");
+            log.Info($"Cloudflare DNS — Потери: {cloudflareResult.PacketLoss}%, Пинг: {cloudflareResult.AveragePing} мс");
 
-            if (googleAvg < cloudflareAvg) return "Google";
-            if (cloudflareAvg < googleAvg) return "Cloudflare";
+            if (googleResult.PacketLoss != cloudflareResult.PacketLoss)
+                return googleResult.PacketLoss < cloudflareResult.PacketLoss ? "Google" : "Cloudflare";
 
-            return "Google"; // По умолчанию
+            if (googleResult.AveragePing != cloudflareResult.AveragePing)
+                return googleResult.AveragePing < cloudflareResult.AveragePing ? "Google" : "Cloudflare";
+
+            return "Google";
         }
 
-        private async Task<int> GetPingAverageAsync(string ip, ILog log)
+        private async Task<(int AveragePing, int PacketLoss)> GetPingResultAsync(string ip, ILog log)
         {
-            var result = await CommandExecutor.ExecuteAsync($"ping -n 3 {ip}", log);
+            var result = await CommandExecutor.ExecuteAsync($"ping -n 5 {ip}", log);
 
             if (!result.IsSuccess || string.IsNullOrWhiteSpace(result.Output))
             {
                 log.Error($"Не удалось выполнить ping до {ip}");
 
-                return int.MaxValue;
+                return (int.MaxValue, 100);
             }
 
-            string output = result.Output;
+            var output = result.Output;
 
+            // Потери пакетов
+            int packetLoss = 100;
+            var lossMatch = Regex.Match(output, @"Lost = (\d+)", RegexOptions.IgnoreCase);
+            var sentMatch = Regex.Match(output, @"Sent = (\d+)", RegexOptions.IgnoreCase);
+
+            if (lossMatch.Success && sentMatch.Success &&
+                int.TryParse(lossMatch.Groups[1].Value, out int lost) &&
+                int.TryParse(sentMatch.Groups[1].Value, out int sent) &&
+                sent > 0)
+            {
+                packetLoss = (int)((double)lost / sent * 100);
+            }
+
+            // Средний пинг (EN и RU)
+            int avgPing = int.MaxValue;
             var matchEn = Regex.Match(output, @"Average\s*=\s*(\d+)", RegexOptions.IgnoreCase);
-            if (matchEn.Success && int.TryParse(matchEn.Groups[1].Value, out int avgEn))
-                return avgEn;
-
             var matchRu = Regex.Match(output, @"Средн[ее]*\s*=\s*(\d+)", RegexOptions.IgnoreCase);
-            if (matchRu.Success && int.TryParse(matchRu.Groups[1].Value, out int avgRu))
-                return avgRu;
 
-            log.Error($"Не удалось извлечь среднее значение пинга из ответа ping до {ip}");
+            if (matchEn.Success && int.TryParse(matchEn.Groups[1].Value, out int avgEn))
+                avgPing = avgEn;
+            else if (matchRu.Success && int.TryParse(matchRu.Groups[1].Value, out int avgRu))
+                avgPing = avgRu;
+            else
+                log.Error($"Не удалось извлечь средний пинг из вывода ping для {ip}");
 
-            return int.MaxValue;
+            return (avgPing, packetLoss);
         }
     }
 }

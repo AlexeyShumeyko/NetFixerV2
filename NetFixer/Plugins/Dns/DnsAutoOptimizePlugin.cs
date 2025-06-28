@@ -28,6 +28,12 @@ namespace NetFixer.Plugins.Dns
             // Сравниваем Google и Cloudflare по ping
             var bestDns = await new DnsPingComparePlugin().GetBestDnsAsync(log);
 
+            if (string.IsNullOrEmpty(bestDns))
+            {
+                log.Info("Оставляем текущие настройки.");
+                return;
+            }
+
             INetFixPlugin dnsSetter = bestDns == "Google"
                 ? new DnsSetGooglePlugin()
                 : new DnsSetCloudflarePlugin();

@@ -1,6 +1,5 @@
 ﻿using NetFixer.Interfaces;
 using NetFixer.Utils;
-using System.Text.RegularExpressions;
 
 namespace NetFixer.Plugins.Dns
 {
@@ -13,16 +12,61 @@ namespace NetFixer.Plugins.Dns
 
             var lines = result.Output.Split('\n');
 
-            var interfaces = lines
-                .Skip(3)
-                .Where(line => line.Contains("Подключен") || line.Contains("Connected"))
-                .Select(line =>
+            int headerIndex = Array.FindIndex(lines, line =>
+                line.Contains("Admin State") &&
+                line.Contains("State") &&
+                line.Contains("Interface Name")
+            );
+
+            if (headerIndex == -1)
+            {
+                log.Error("Не удалось найти заголовок таблицы интерфейсов.");
+                return new List<string>();
+            }
+
+            string headerLine = lines[headerIndex];
+            int statePosition = headerLine.IndexOf("State");
+            int namePosition = headerLine.IndexOf("Interface Name");
+
+            if (namePosition == -1 || namePosition == -1)
+            {
+                log.Error("Не удалось определить позицию имени интерфейса.");
+                return new List<string>();
+            }
+
+            var interfaces = new List<string>();
+
+            for (int i = headerIndex + 1; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                string state = line.Length > statePosition
+                    ? line.Substring(statePosition, Math.Min(namePosition - statePosition, line.Length - statePosition)).Trim()
+                    : "";
+
+                if (state.Contains("Disconnected", StringComparison.OrdinalIgnoreCase) ||
+                    state.Contains("Отключен", StringComparison.OrdinalIgnoreCase) ||
+                    state.Contains("Down", StringComparison.OrdinalIgnoreCase))
                 {
-                    var parts = Regex.Split(line.Trim(), @"\s{2,}");
-                    return parts.LastOrDefault();
-                })
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .ToList();
+                    continue;
+                }
+
+                bool isConnected = state.Contains("Connected", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Contains("Подключен", StringComparison.OrdinalIgnoreCase) ||
+                                 state.Contains("Up", StringComparison.OrdinalIgnoreCase);
+
+                if (!isConnected)
+                    continue;
+
+                string interfaceName = line.Length > namePosition
+                    ? line.Substring(namePosition).Trim()
+                    : null;
+
+                if (!string.IsNullOrWhiteSpace(interfaceName))
+                    interfaces.Add(interfaceName);
+            }
 
             return interfaces;
         }
@@ -33,26 +77,43 @@ namespace NetFixer.Plugins.Dns
             var result = await CommandExecutor.ExecuteAsync("netsh interface ip show config", log);
 
             var dnsServers = new List<string>();
+            var lines = result.Output.Split('\n').Select(line => line.Trim()).ToList();
+            bool isDnsBlock = false;
 
-            foreach (var line in result.Output.Split('\n'))
+            foreach (var line in lines)
             {
-                if (line.Contains("DNS-") || line.Contains("DNS Servers"))
+                if (line.StartsWith("Statically Configured DNS Servers") || line.StartsWith("DNS servers configured through DHCP"))
                 {
-                    var dnsLine = line.Split(':').LastOrDefault()?.Trim();
+                    var parts = line.Split(':');
 
-                    if (!string.IsNullOrWhiteSpace(dnsLine))
+                    if (parts.Length > 1)
                     {
-                        if (onlyNonGoogleCloudflare)
-                        {
-                            if (!dnsLine.Contains("8.8.8.8") && !dnsLine.Contains("1.1.1.1"))
-                                dnsServers.Add(dnsLine);
-                        }
-                        else
-                        {
-                            dnsServers.Add(dnsLine);
-                        }
+                        var ip = parts[1].Trim();
+                        if (!string.IsNullOrWhiteSpace(ip) && ip != "None")
+                            dnsServers.Add(ip);
                     }
+                    isDnsBlock = true;
                 }
+
+                else if (isDnsBlock)
+                {
+                    // Следующая строка после DNS может содержать второй адрес
+                    if (string.IsNullOrWhiteSpace(line) || line.Contains(":"))
+                    {
+                        isDnsBlock = false;
+                        continue;
+                    }
+
+                    if (line != "None")
+                        dnsServers.Add(line.Trim());
+                }
+            }
+
+            if (onlyNonGoogleCloudflare)
+            {
+                dnsServers = dnsServers
+                    .Where(ip => ip != "8.8.8.8" && ip != "8.8.4.4" && ip != "1.1.1.1" && ip != "1.0.0.1")
+                    .ToList();
             }
 
             return dnsServers;

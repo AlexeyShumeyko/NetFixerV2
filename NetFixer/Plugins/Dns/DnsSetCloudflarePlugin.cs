@@ -4,11 +4,11 @@ namespace NetFixer.Plugins.Dns
 {
     public class DnsSetCloudflarePlugin : INetFixPlugin
     {
-        public string Name => "Установить Cloudflare DNS";
+        public string Name => "Установка Cloudflare DNS";
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
-            log.Info("Установка Cloudflare DNS");
+            log.StartPluginGroup(Name);
 
             var success = await DnsUtils.SetDnsAsync("1.1.1.1", "1.0.0.1", log);
 

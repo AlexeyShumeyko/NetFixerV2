@@ -8,6 +8,7 @@ namespace NetFixer.Plugins.Dns
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
+            log.SubSection(Name);
             log.Info("Получение текущих настроек DNS");
 
             var currentDns = await GetCurrentDnsAsync(log);
@@ -23,6 +24,7 @@ namespace NetFixer.Plugins.Dns
 
         public async Task<List<string>> GetCurrentDnsAsync(ILog log)
         {
+            log.StartPluginGroup(Name);
             return await DnsUtils.GetCurrentDnsAsync(log, onlyNonGoogleCloudflare: true);
         }
     }

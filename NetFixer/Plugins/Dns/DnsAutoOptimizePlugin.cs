@@ -4,11 +4,11 @@ namespace NetFixer.Plugins.Dns
 {
     public class DnsAutoOptimizePlugin : INetFixPlugin
     {
-        public string Name => "DNS: Автоматическая оптимизация";
+        public string Name => "Автоматическая оптимизация DNS";
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
-            log.Info("Запущена автоматическая оптимизация DNS");
+            //log.StartPluginGroup("Запущена автоматическая оптимизация DNS");
 
             //Очистка кеша DNS
             await new DnsFlushPlugin().ExecuteAsync(log, cancellationToken);

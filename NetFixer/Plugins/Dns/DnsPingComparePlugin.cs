@@ -6,7 +6,7 @@ namespace NetFixer.Plugins.Dns
 {
     public class DnsPingComparePlugin : INetFixPlugin
     {
-        public string Name => "Сравнение пинга DNS";
+        public string Name => "Сравнение отклика DNS (Google и Cloudflare)";
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
@@ -16,6 +16,8 @@ namespace NetFixer.Plugins.Dns
 
         public async Task<string> GetBestDnsAsync(ILog log)
         {
+            log.StartPluginGroup(Name);
+
             var googleResult = await GetPingResultAsync("8.8.8.8", log);
             var cloudflareResult = await GetPingResultAsync("1.1.1.1", log);
 

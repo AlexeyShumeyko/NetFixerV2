@@ -9,7 +9,7 @@ namespace NetFixer.Plugins.Dns
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
-            log.Info("Запуск команды ipconfig /flushdns");
+            log.StartPluginGroup(Name);
 
             await Task.Delay(500);
 

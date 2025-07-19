@@ -4,11 +4,11 @@ namespace NetFixer.Plugins.Dns
 {
     public class DnsSetGooglePlugin : INetFixPlugin
     {
-        public string Name => "Установить Google DNS";
+        public string Name => "Установка Google DNS";
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
-            log.Info("Установка Google DNS");
+            log.StartPluginGroup(Name);
 
             var success = await DnsUtils.SetDnsAsync("8.8.8.8", "8.8.4.4", log);
 

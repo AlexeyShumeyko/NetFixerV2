@@ -11,13 +11,11 @@ namespace NetFixer.Plugins.Dns
         {
             "fabrika-fotoknigi.com",
             "online.fabrika-fotoknigi.com",
-            "check.fabrika-fotoknigi.com",
-            "layflat.info"
         };
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
-            log.Info("Запуск nslookup для доменов");
+            log.StartPluginGroup("Проверка nslookup для доменов");
 
             foreach (var domain in _domain)
             {

@@ -6,5 +6,9 @@
         void Success(string message);
         void Error(string message);
         void Command(string command, string output, string error, int exitCode);
+
+        void SubSection(string title);
+        void StartPluginGroup(string pluginName);
+        void Group(string message);
     }
 }

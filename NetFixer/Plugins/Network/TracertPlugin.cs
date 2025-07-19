@@ -9,6 +9,8 @@ namespace NetFixer.Plugins.Network
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
+            log.StartPluginGroup(Name);
+
             var targets = new Dictionary<string, string>
             {
                 { "fabrika-fotoknigi.com", "31.130.202.41" },
@@ -20,7 +22,7 @@ namespace NetFixer.Plugins.Network
                 string domain = pair.Key;
                 string ip = pair.Value;
 
-                log.Info($"Трассировка маршрута до {domain}:");
+                log.SubSection($"Трассировка маршрута до {domain}:");
                 var result = await CommandExecutor.ExecuteAsync($"tracert -d {domain}", log);
 
                 if (result.Output.Contains("Превышен интервал ожидания") || result.Output.Contains("100% потерь"))
@@ -29,7 +31,7 @@ namespace NetFixer.Plugins.Network
                 if (IsDnsError(result.Output.ToString()))
                 {
                     result = await CommandExecutor.ExecuteAsync($"tracert -d {ip}", log);
-                    log.Info($"Трассировка маршрута по IP {ip} (fallback):\n{result}");
+                    log.SubSection($"Трассировка маршрута по IP {ip} (fallback):\n{result}");
                 }
             }
         }

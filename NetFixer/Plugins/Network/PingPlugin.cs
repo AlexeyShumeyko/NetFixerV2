@@ -6,10 +6,12 @@ namespace NetFixer.Plugins.Network
 {
     public class PingPlugin : INetFixPlugin
     {
-        public string Name => "Проверка пинга до сервисов";
+        public string Name => "Проверка пинга до сайтов";
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
+            log.StartPluginGroup(Name);
+
             var targets = new Dictionary<string, string>
             {
                 { "fabrika-fotoknigi.com", "31.130.202.41" },
@@ -24,7 +26,7 @@ namespace NetFixer.Plugins.Network
 
         private async Task TestConnection(ILog log, string domain, string ip)
         {
-            log.Info($"Проверка пинга: {domain}");
+            log.SubSection($"Проверка пинга: {domain}");
             var result = await CommandExecutor.ExecuteAsync($"ping -n 4 {domain}", log);
 
             if (IsSuccessfulPing(result.Output))

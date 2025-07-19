@@ -9,7 +9,7 @@ namespace NetFixer.Plugins.Network
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
-            log.Info("Выполняем сброс Winsock.");
+            log.StartPluginGroup(Name);
 
             var result = await CommandExecutor.ExecuteAsync("netsh winsock reset", log);
 

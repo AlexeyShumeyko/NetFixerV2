@@ -10,11 +10,13 @@ namespace NetFixer.Plugins.Network
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
+            log.StartPluginGroup(Name);
+
             int[] testSizes = { 1472, 1464, 1452, 1400, 1300 };
             int optimalMtu = -1;
             string testHost = "fabrika-fotoknigi.com";
 
-            log.Info($"Поиск оптимального MTU по {testHost}...");
+            log.SubSection($"Поиск оптимального MTU по {testHost}...");
 
             foreach (int size in testSizes)
             {
@@ -42,7 +44,7 @@ namespace NetFixer.Plugins.Network
 
             await CommandExecutor.ExecuteAsync("netsh interface ipv4 show interfaces", log);
 
-            log.Info("Работа завершена. Перезапустите сетевой адаптер или ПК для применения MTU.");
+            log.Info("MTU настроен. Перезапустите сетевой адаптер или ПК для применения MTU.");
         }
 
         private bool ContainsFragmentationError(string output)

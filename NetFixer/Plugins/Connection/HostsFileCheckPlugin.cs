@@ -8,6 +8,8 @@ namespace NetFixer.Plugins.Connection
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
+            log.StartPluginGroup(Name);
+
             var path = @"C:\Windows\System32\drivers\etc\hosts";
 
             try
@@ -32,7 +34,7 @@ namespace NetFixer.Plugins.Connection
 
                 foreach (var line in lines)
                 {
-                    log.Info("  " + line);
+                    log.SubSection("  " + line);
                 }
 
                 log.Success("Чтение hosts завершено.");

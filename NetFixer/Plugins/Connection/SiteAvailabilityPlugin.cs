@@ -8,9 +8,9 @@ namespace NetFixer.Plugins.Connection
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
-            var url = "https://fabrika-fotoknigi.com";
+            log.StartPluginGroup(Name);
 
-            log.Info("Проверка доступности сайта (HTTP/HTTPS)");
+            var url = "https://fabrika-fotoknigi.com";
 
             try
             {

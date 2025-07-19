@@ -9,7 +9,7 @@ namespace NetFixer.Plugins.Connection
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
-            log.Info("Проверка настроек WinHTTP-прокси...");
+            log.StartPluginGroup("Проверка настроек WinHTTP-прокси...");
 
             var result = await CommandExecutor.ExecuteAsync("netsh winhttp show proxy", log);
             var output = result.Output;

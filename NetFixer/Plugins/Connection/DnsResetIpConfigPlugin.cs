@@ -10,6 +10,8 @@ namespace NetFixer.Plugins.Connection
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
+            log.StartPluginGroup(Name);
+
             log.Info("Анализ сетевых интерфейсов: используется ли DHCP...");
 
             var result = await CommandExecutor.ExecuteAsync("netsh interface ip show config", log);

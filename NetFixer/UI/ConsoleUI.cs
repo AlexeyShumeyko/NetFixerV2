@@ -14,7 +14,7 @@ namespace NetFixer.UI
             Console.Clear();
             RenderMainInterface.MainInterface();
 
-            var logger = new CombinedLogHandler(new PrettyConsoleLogHandler(), new FileLogHandler());
+            var logger = new CombinedLogHandler(new PrettyConsoleLogHandler(), new HtmlFileLogHandler());
             var plugins = PluginManager.GetPlugins();
 
             await AnsiConsole.Progress()
@@ -38,7 +38,7 @@ namespace NetFixer.UI
 
                         try
                         {
-                            logger.Info($"Запуск: {plugin.Name}");
+                            logger.Group($"Запуск: {plugin.Name}");
 
                             var run = Task.Run(async () =>
                             {

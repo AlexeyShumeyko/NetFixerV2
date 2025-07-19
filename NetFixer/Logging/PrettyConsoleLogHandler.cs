@@ -21,6 +21,21 @@ namespace NetFixer.Logging
             AnsiConsole.MarkupLine($"[red][[ERROR]] {Markup.Escape(message)}[/]");
         }
 
+        public void Group(string message)
+        {
+            AnsiConsole.MarkupLine($"[white][[GROUP]][/] {Markup.Escape(message)}");
+        }
+
+        public void StartPluginGroup(string message)
+        {
+            AnsiConsole.MarkupLine($"[grey][[START]][/] {Markup.Escape(message)}");
+        }
+
+        public void SubSection(string message)
+        {
+            AnsiConsole.MarkupLine($"[grey][[SECTION]][/] {Markup.Escape(message)}");
+        }
+
         public void Command(string command, string output, string error, int exitCode)
         {
             AnsiConsole.MarkupLine($"\n[mediumpurple1][[COMMAND]] {Markup.Escape(command)}[/]");

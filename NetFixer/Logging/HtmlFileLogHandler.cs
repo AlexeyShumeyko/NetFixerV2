@@ -18,7 +18,6 @@ namespace NetFixer.Logging
 
             _filePath = Path.Combine(logDir, fileName);
             InitializeHtml();
-            Info($"[Init] HTML лог-файл: {_filePath}");
         }
 
         private void InitializeHtml()

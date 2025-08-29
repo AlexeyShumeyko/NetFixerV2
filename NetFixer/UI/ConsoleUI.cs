@@ -78,5 +78,31 @@ namespace NetFixer.UI
             AnsiConsole.MarkupLine("[grey]Нажмите любую клавишу для выхода...[/]");
             Console.ReadKey(true);
         }
+
+        public static void ShowWindows7Warning()
+        {
+            Console.Clear();
+            RenderMainInterface.MainInterface();
+
+            AnsiConsole.MarkupLine("\n[red bold]✗ Программа не поддерживает Windows 7[/]");
+            AnsiConsole.MarkupLine("[yellow]→ Пожалуйста, обновите систему до Windows 10+[/]");
+            AnsiConsole.MarkupLine("[grey]→ Используйте другую операционную систему[/]");
+
+            AnsiConsole.MarkupLine("\n[yellow]Нажмите любую клавишу для выхода...[/]");
+            Console.ReadKey(true);
+        }
+
+        public static void ShowMacOsWarning()
+        {
+            Console.Clear();
+            RenderMainInterface.MainInterface();
+
+            AnsiConsole.MarkupLine("\n[red bold]✗ Программа не поддерживает macOS[/]");
+            AnsiConsole.MarkupLine("[yellow]→ Используйте Windows 10 или новее[/]");
+            AnsiConsole.MarkupLine("[grey]→ Программа разработана только для Windows[/]");
+
+            AnsiConsole.MarkupLine("\n[yellow]Нажмите любую клавишу для выхода...[/]");
+            Console.ReadKey(true);
+        }
     }
 }

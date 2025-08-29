@@ -12,6 +12,7 @@ namespace NetFixer.Plugins.Network
             await new TracertPlugin().ExecuteAsync(log, cancellationToken);
             await new MtuCheckPlugin().ExecuteAsync(log, cancellationToken);
             await new WinsockResetPlugin().ExecuteAsync(log, cancellationToken);
+            await new ArpCacheClearPlugin().ExecuteAsync(log, cancellationToken);
 
             log.Info("Диагностика сети завершена");
         }

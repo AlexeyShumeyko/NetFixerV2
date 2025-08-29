@@ -1,7 +1,7 @@
 ﻿using NetFixer.Interfaces;
 using NetFixer.Utils;
 
-namespace NetFixer.Plugins.Connection
+namespace NetFixer.Plugins.Security
 {
     public class ProxyCheckPlugin : INetFixPlugin
     {

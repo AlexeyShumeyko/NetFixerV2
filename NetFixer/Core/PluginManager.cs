@@ -1,7 +1,9 @@
 ﻿using NetFixer.Interfaces;
+using NetFixer.Plugins;
 using NetFixer.Plugins.Connection;
 using NetFixer.Plugins.Dns;
 using NetFixer.Plugins.Network;
+using NetFixer.Plugins.Security;
 
 namespace NetFixer.Core
 {
@@ -11,6 +13,7 @@ namespace NetFixer.Core
         {
             new DnsAutoOptimizePlugin(),
             new NetworkDiagnosticsPlugin(),
+            new SecurityCheckPlugin(),
             new ConnectionCheckPlugin()
         };
 

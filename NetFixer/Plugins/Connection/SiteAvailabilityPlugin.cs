@@ -1,4 +1,5 @@
 ﻿using NetFixer.Interfaces;
+using System.Diagnostics;
 
 namespace NetFixer.Plugins.Connection
 {
@@ -6,27 +7,68 @@ namespace NetFixer.Plugins.Connection
     {
         public string Name => "Проверка доступности сайта (HTTP/HTTPS)";
 
+        private readonly List<string> _targets = new() 
+        {
+            "https://fabrika-fotoknigi.com",
+            "https://online.fabrika-fotoknigi.com"
+        };
+
         public async Task ExecuteAsync(ILog log, CancellationToken token)
         {
             log.StartPluginGroup(Name);
 
-            var url = "https://fabrika-fotoknigi.com";
+            foreach (var url in _targets)
+            {
+                await TestSiteAvailability(log, url, token);
+            }
+        }
+
+        private async Task TestSiteAvailability(ILog log, string url, CancellationToken token)
+        {
+            log.SubSection($"Проверка: {url}");
 
             try
             {
-                var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-                var response = await client.GetAsync(url, token);
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                var stopwatch = Stopwatch.StartNew();
 
-                log.Info($"HTTP статус: {response.StatusCode}");
-                log.Info($"Время ответа: {response.Headers.Date}");
+                var response = await client.GetAsync(url, token);
+                stopwatch.Stop();
+
+                var ttfb = stopwatch.ElapsedMilliseconds;
+                var status = response.StatusCode;
+
+                log.Info($"HTTP статус: {status}");
+                log.Info($"Время ответа (TTFB) {ttfb} мс");
+                log.Info($"Размер ответа: {response.Content.Headers.ContentLength ?? 0} байт");
+
+                if (response.IsSuccessStatusCode)
+                    log.Success($"Успешное подключение ({ttfb} мс)");
+                else
+                    log.Error($"Сервер ответил с кодом: {(int)status} {status}");
+            }
+            catch (TaskCanceledException ex)
+            {
+                log.Error("ERR_TIME_OUT: Превышено время ожидания");
+                log.SubSection($"Exception: {ex}");
+            }
+            catch (HttpRequestException ex) when (ex.Message.Contains("connection reset"))
+            {
+                log.Error($"ERR_CONNECTION_RESET: Соединение сброшено");
+                log.SubSection($"Exception: {ex.StatusCode} - {ex.Message}");
+            }
+            catch (HttpRequestException ex) when (ex.Message.Contains("SSL"))
+            {
+                log.Error("ERR_SSL_PROTOCOL_ERROR: Ошибка SSL/TLS");
+                log.SubSection($"Exception: {ex.StatusCode} - {ex.Message}");
             }
             catch (HttpRequestException ex)
             {
-                log.Error($"Ошибка HTTP: {ex.StatusCode} - {ex.Message}");
+                log.Error($"Ошибка HTTP: {ex.Message}");
             }
-            catch (TaskCanceledException)
+            catch (Exception ex)
             {
-                log.Error("Таймаут подключения (возможно блокировка)");
+                log.Error($"Неизвестная ошибка: {ex.Message}");
             }
         }
     }

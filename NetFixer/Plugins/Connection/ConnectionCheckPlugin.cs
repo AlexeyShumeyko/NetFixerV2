@@ -8,8 +8,9 @@ namespace NetFixer.Plugins.Connection
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
-            await new ProxyCheckPlugin().ExecuteAsync(log, cancellationToken);
             await new SiteAvailabilityPlugin().ExecuteAsync(log, cancellationToken);
+            await new CurlCheckPlugin().ExecuteAsync(log, cancellationToken);
+            await new PortAvailabilityPlugin().ExecuteAsync(log, cancellationToken);
             await new HostsFileCheckPlugin().ExecuteAsync(log, cancellationToken);
             await new DnsResetIpConfigPlugin().ExecuteAsync(log, cancellationToken);
 

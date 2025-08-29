@@ -8,17 +8,18 @@ namespace NetFixer.Plugins.Dns
 
         public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
         {
-            //log.StartPluginGroup("Запущена автоматическая оптимизация DNS");
-
-            //Очистка кеша DNS
-            await new DnsFlushPlugin().ExecuteAsync(log, cancellationToken);
-
             //Проверка текущих DNS
             var nonCompliantDns = await new DnsCheckCurrentPlugin().GetCurrentDnsAsync(log);
 
             if (!nonCompliantDns.Any())
             {
                 log.Info("Все интерфейсы уже используют Google или Cloudflare DNS. Повторная настройка не требуется.");
+
+                //Очистка кеша DNS
+                await new DnsFlushPlugin().ExecuteAsync(log, cancellationToken);
+
+                //Проверка работы
+                await new DnsCheckNslookupPlugin().ExecuteAsync(log, cancellationToken);
 
                 return;
             }
@@ -31,6 +32,13 @@ namespace NetFixer.Plugins.Dns
             if (string.IsNullOrEmpty(bestDns))
             {
                 log.Info("Оставляем текущие настройки.");
+
+                //Очистка кеша DNS
+                await new DnsFlushPlugin().ExecuteAsync(log, cancellationToken);
+
+                //Проверка работы
+                await new DnsCheckNslookupPlugin().ExecuteAsync(log, cancellationToken);
+
                 return;
             }
 
@@ -41,6 +49,10 @@ namespace NetFixer.Plugins.Dns
             log.Info($"Выбран лучший DNS: {bestDns}. Установка...");
             await dnsSetter.ExecuteAsync(log, cancellationToken);
 
+            //Очистка кеша DNS
+            await new DnsFlushPlugin().ExecuteAsync(log, cancellationToken);
+
+            //Проверка работы
             await new DnsCheckNslookupPlugin().ExecuteAsync(log, cancellationToken);
 
             log.Info("Оптимизация DNS завершена успешно");

@@ -21,6 +21,11 @@ namespace NetFixer.Logging
             AnsiConsole.MarkupLine($"[red][[ERROR]] {Markup.Escape(message)}[/]");
         }
 
+        public void Warning(string message)
+        {
+            AnsiConsole.MarkupLine($"[yellow][[WARNING]] {Markup.Escape(message)}[/]");
+        }
+
         public void Group(string message)
         {
             AnsiConsole.MarkupLine($"[white][[GROUP]][/] {Markup.Escape(message)}");
@@ -42,22 +47,17 @@ namespace NetFixer.Logging
 
             if (!string.IsNullOrWhiteSpace(output))
             {
-                var lines = output.Split(
-                    new[] { "\r\n", "\n" },
-                    StringSplitOptions.RemoveEmptyEntries
-                );
-
-                foreach (var line in lines)
-                {
-                    if (!string.IsNullOrWhiteSpace(line))
-                    {
-                        AnsiConsole.MarkupLine($"[yellow][[STDOUT]] {Markup.Escape(line)}[/]");
-                    }
-                }
+                foreach (var line in output.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+                    AnsiConsole.MarkupLine($"[yellow][[STDOUT]] {Markup.Escape(line)}[/]");
             }
 
             if (!string.IsNullOrWhiteSpace(error))
                 AnsiConsole.MarkupLine($"[red][[STDERR]] {Markup.Escape(error)}[/]");
+        }
+
+        public void Debug(string message)
+        {
+            AnsiConsole.MarkupLine($"[dim][[DEBUG]][/] {Markup.Escape(message)}");
         }
     }
 }

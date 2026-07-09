@@ -11,6 +11,7 @@ namespace NetFixer.Plugins.Security
             await new AntivirusCheckPlugin().ExecuteAsync(log, cancellationToken);
             await new FirewallCheckPlugin().ExecuteAsync(log, cancellationToken);
             await new ProxyCheckPlugin().ExecuteAsync(log, cancellationToken);
+            await new PacScriptPlugin().ExecuteAsync(log, cancellationToken);
 
             log.Info("Проверка безопасности завершена");
         }

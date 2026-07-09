@@ -1,5 +1,6 @@
 ﻿using NetFixer.Core;
 using NetFixer.Logging;
+using NetFixer.Resources;
 using Spectre.Console;
 
 namespace NetFixer.UI
@@ -14,7 +15,11 @@ namespace NetFixer.UI
             Console.Clear();
             RenderMainInterface.MainInterface();
 
-            var logger = new CombinedLogHandler(new PrettyConsoleLogHandler(), new HtmlFileLogHandler());
+            await DiagnosticContext.Instance.InitializeAsync(
+                Targets.Site);
+
+            var logger = new PrettyConsoleLogHandler();
+
             var plugins = PluginManager.GetPlugins();
 
             await AnsiConsole.Progress()
@@ -42,13 +47,31 @@ namespace NetFixer.UI
 
                             var run = Task.Run(async () =>
                             {
-                                await plugin.ExecuteAsync(logger, CancellationToken.None);
+                                try
+                                {
+                                    using var cts =
+                                        CancellationTokenSource.CreateLinkedTokenSource(
+                                            CancellationToken.None);
+
+                                    cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+                                    await plugin.ExecuteAsync(
+                                        logger,
+                                        cts.Token);
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.Error(
+                                        $"Plugin crash: {plugin.Name} -> {ex.Message}");
+                                }
                             });
 
                             while (!run.IsCompleted)
                             {
-                                await Task.Delay(200);
-                                pluginTask.Increment(0.01);
+                                await Task.Delay(100);
+
+                                if (pluginTask.Value < 0.95)
+                                    pluginTask.Increment(0.01);
                             }
 
                             await run;
@@ -65,7 +88,6 @@ namespace NetFixer.UI
                         {
                             pluginTask.StopTask();
                             mainTask.Increment(1);
-                            logger.SaveToFile();
                         }
                     }
 

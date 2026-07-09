@@ -12,7 +12,7 @@ namespace NetFixer.UI
             .Color(_mainColor)
             .Centered();
 
-        private static readonly Text _version = new Text("v1.2.0", new Style(_disabledColor))
+        private static readonly Text _version = new Text("v2.0.1", new Style(_disabledColor))
             .Centered();
 
         public static void MainInterface()

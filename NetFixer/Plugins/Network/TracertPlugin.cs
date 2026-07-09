@@ -1,45 +1,41 @@
 ﻿using NetFixer.Interfaces;
+using NetFixer.Resources;
 using NetFixer.Utils;
 
 namespace NetFixer.Plugins.Network
 {
     public class TracertPlugin : INetFixPlugin
     {
-        public string Name => "Проверка маршрута (tracert)";
+        public string Name => "Трассировка маршрута";
 
-        public async Task ExecuteAsync(ILog log, CancellationToken token)
+        public async Task ExecuteAsync(
+            ILog log,
+            CancellationToken token)
         {
-            log.StartPluginGroup(Name);
+            log.SubSection(Name);
 
-            var targets = new Dictionary<string, string>
+            try
             {
-                { "fabrika-fotoknigi.com", "31.130.202.41" },
-                { "online.fabrika-fotoknigi.com", "178.172.173.90" }
-            };
+                var result =
+                    await CommandExecutor.ExecuteAsync(
+                        $"tracert -d {Targets.Site}",
+                        log);
 
-            foreach (var pair in targets)
-            {
-                string domain = pair.Key;
-                string ip = pair.Value;
-
-                log.SubSection($"Трассировка маршрута до {domain}:");
-                var result = await CommandExecutor.ExecuteAsync($"tracert -d {domain}", log);
-
-                if (result.Output.Contains("Превышен интервал ожидания") || result.Output.Contains("100% потерь"))
-                    log.Error($"Проблемы с доступом к {pair} — потеря пакетов.");
-
-                if (IsDnsError(result.Output.ToString()))
+                if (result.IsSuccess)
                 {
-                    result = await CommandExecutor.ExecuteAsync($"tracert -d {ip}", log);
-                    log.SubSection($"Трассировка маршрута по IP {ip} (fallback):\n{result}");
+                    log.Success(
+                        "Трассировка выполнена.");
+                }
+                else
+                {
+                    log.Warning(
+                        "Трассировка завершилась с ошибками.");
                 }
             }
-        }
-
-        private bool IsDnsError(string output)
-        {
-            return output.Contains("не удалось разрешить") ||
-                   output.Contains("could not find host", StringComparison.OrdinalIgnoreCase);
+            catch (Exception ex)
+            {
+                log.Error(ex.Message);
+            }
         }
     }
 }

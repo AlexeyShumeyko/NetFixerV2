@@ -11,6 +11,7 @@ namespace NetFixer.Plugins.Dns
         {
             "fabrika-fotoknigi.com",
             "online.fabrika-fotoknigi.com",
+            "new.fabrika-fotoknigi.com"
         };
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)

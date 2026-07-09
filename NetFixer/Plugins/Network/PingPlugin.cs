@@ -1,75 +1,64 @@
-﻿using NetFixer.Interfaces;
+﻿using NetFixer.Core;
+using NetFixer.Interfaces;
+using NetFixer.Resources;
 using NetFixer.Utils;
+using System.Net.NetworkInformation;
 using System.Text.RegularExpressions;
 
 namespace NetFixer.Plugins.Network
 {
     public class PingPlugin : INetFixPlugin
     {
-        public string Name => "Проверка пинга до сайтов";
+        public string Name => "Ping диагностика";
 
-        public async Task ExecuteAsync(ILog log, CancellationToken token)
+        public async Task ExecuteAsync(
+            ILog log,
+            CancellationToken token)
         {
-            log.StartPluginGroup(Name);
+            log.SubSection(Name);
 
-            var targets = new Dictionary<string, string>
+            try
             {
-                { "fabrika-fotoknigi.com", "31.130.202.41" },
-                { "online.fabrika-fotoknigi.com", "178.172.173.90" }
-            };
+                var addresses =
+                    DiagnosticContext
+                    .Instance
+                    .ResolvedAddresses;
 
-            foreach (var target in targets)
-            {
-                await TestConnection(log, target.Key, target.Value);
+                using var ping =
+                    new Ping();
+
+                foreach (var ip in addresses)
+                {
+                    try
+                    {
+                        var reply =
+                            await ping.SendPingAsync(
+                                ip,
+                                5000);
+
+                        if (reply.Status ==
+                            IPStatus.Success)
+                        {
+                            log.Success(
+                                $"{ip} : {reply.RoundtripTime} ms");
+                        }
+                        else
+                        {
+                            log.Warning(
+                                $"{ip} : {reply.Status}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error(
+                            $"{ip}: {ex.Message}");
+                    }
+                }
             }
-        }
-
-        private async Task TestConnection(ILog log, string domain, string ip)
-        {
-            log.SubSection($"Проверка пинга: {domain}");
-            var result = await CommandExecutor.ExecuteAsync($"ping -n 4 {domain}", log);
-
-            if (IsSuccessfulPing(result.Output))
+            catch (Exception ex)
             {
-                log.Success($"{domain} отвечает нормально");
-
-                return;
+                log.Error(ex.Message);
             }
-
-            if (IsDnsError(result.Output))
-            {
-                log.Error($"Не удалось выполнить разрешение DNS, пробуем по IP {ip}...");
-                result = await CommandExecutor.ExecuteAsync($"ping -n 4 {ip}", log);
-
-                if (IsSuccessfulPing(result.Output))
-                    log.Success($"{ip} отвечает нормально");
-                else
-                    log.Error($"Потеря пакета до {ip}");
-            }
-            else if (HasPacketLoss(result.Output))
-            {
-                log.Error($"Потеря пакета до {domain}");
-            }
-        }
-
-        private bool IsSuccessfulPing(string output)
-        {
-            return Regex.IsMatch(output, @"Reply from.+time(?:=|<\d+ms)", RegexOptions.IgnoreCase) ||
-                   Regex.IsMatch(output, @"Ответ от.+врем(?:я|ени)(?:=|<\d+мс)", RegexOptions.IgnoreCase);
-        }
-
-        private bool HasPacketLoss(string output)
-        {
-            return output.Contains("100% loss") ||
-                   output.Contains("100% потерь") ||
-                   output.Contains("Request timed out") ||
-                   output.Contains("Превышен интервал ожидания");
-        }
-
-        private bool IsDnsError(string output)
-        {
-            return output.Contains("не удалось разрешить") ||
-                   output.Contains("could not find host", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

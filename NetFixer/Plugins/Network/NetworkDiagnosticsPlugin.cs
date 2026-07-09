@@ -4,17 +4,30 @@ namespace NetFixer.Plugins.Network
 {
     public class NetworkDiagnosticsPlugin : INetFixPlugin
     {
-        public string Name => "Диагностика и восстановление сети";
+        private readonly INetFixPlugin[] _plugins =
+            [
+                new PingPlugin(),
+                new TracertPlugin(),
+                new WinsockResetPlugin(),
+                new MtuDiscoveryPlugin()
+            ];
 
-        public async Task ExecuteAsync(ILog log, CancellationToken cancellationToken)
+        public string Name => "Сетевая диагностика";
+
+        public async Task ExecuteAsync(
+            ILog log,
+            CancellationToken token)
         {
-            await new PingPlugin().ExecuteAsync(log, cancellationToken);
-            await new TracertPlugin().ExecuteAsync(log, cancellationToken);
-            await new MtuCheckPlugin().ExecuteAsync(log, cancellationToken);
-            await new WinsockResetPlugin().ExecuteAsync(log, cancellationToken);
-            await new ArpCacheClearPlugin().ExecuteAsync(log, cancellationToken);
+            log.StartPluginGroup(Name);
 
-            log.Info("Диагностика сети завершена");
+            foreach (var plugin in _plugins)
+            {
+                await plugin.ExecuteAsync(
+                    log,
+                    token);
+            }
+
+            log.Info("Сетевая диагностика завершена.");
         }
     }
 }

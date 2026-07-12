@@ -11,7 +11,7 @@ namespace NetFixer.Plugins.Security
         {
             log.StartPluginGroup("Проверка настроек WinHTTP-прокси...");
 
-            var result = await CommandExecutor.ExecuteAsync("netsh winhttp show proxy", log);
+            var result = await CommandExecutor.ExecuteAsync("netsh winhttp show proxy", log, cancellationToken);
             var output = result.Output;
 
             if (output.Contains("Direct access", StringComparison.OrdinalIgnoreCase) ||

@@ -21,28 +21,39 @@ namespace NetFixer.Plugins.Connectivity
             {
                 log.SubSection($"Проверка для {url}");
 
-                await TestCurl(log, url);
+                await TestCurl(log, url, token);
             }
         }
 
-        private async Task TestCurl (ILog log, string url)
+        private async Task TestCurl(ILog log, string url, CancellationToken token)
         {
-            var result = await CommandExecutor.ExecuteAsync(
-                $"curl -I --connect-timeout 10 {url}", 
-                log, 
-                logOutput:true, 
-                logError: false);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            cts.CancelAfter(15000);
 
-            if (result.IsSuccess && result.Output.Contains("HTTP/"))
+            try
             {
-                log.Success($"URL {url} доступен");
+                var result = await CommandExecutor.ExecuteAsync(
+                    $"curl -I --connect-timeout 10 {url}",
+                    log,
+                    logOutput: true,
+                    logError: false,
+                    cts.Token);
 
-                if (result.Output.Contains("200 OK"))
-                    log.Info("Сервер отвечает нормально (200 OK)");
+                if (result.IsSuccess && result.Output.Contains("HTTP/"))
+                {
+                    log.Success($"URL {url} доступен");
+
+                    if (result.Output.Contains("200 OK"))
+                        log.Info("Сервер отвечает нормально (200 OK)");
+                }
+                else
+                {
+                    log.Error($"URL {url} недоступен или превышено время ожидания");
+                }
             }
-            else
+            catch (OperationCanceledException)
             {
-                log.Error($"URL {url} недоступен или превышено время ожидания");
+                log.Error($"URL {url}: curl timeout.");
             }
         }
     }

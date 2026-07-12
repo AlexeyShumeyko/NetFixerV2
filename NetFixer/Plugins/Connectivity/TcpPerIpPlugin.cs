@@ -28,37 +28,20 @@ namespace NetFixer.Plugins.Connectivity
                 {
                     try
                     {
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        cts.CancelAfter(5000);
                         using var tcp = new TcpClient();
 
-                        var connectTask = tcp.ConnectAsync(ip, 443);
-
-                        var timeoutTask = Task.Delay(5000, token);
-
-                        var completed =
-                            await Task.WhenAny(connectTask, timeoutTask);
-
-                        if (completed == timeoutTask)
-                        {
-                            log.Warning(
-                                $"{ip} : TCP 443 TIMEOUT");
-                            continue;
-                        }
-
-                        if (tcp.Connected)
-                        {
-                            log.Success(
-                                $"{ip} : TCP 443 OK");
-                        }
-                        else
-                        {
-                            log.Error(
-                                $"{ip} : TCP 443 FAILED");
-                        }
+                        await tcp.ConnectAsync(ip, 443).WaitAsync(cts.Token);
+                        log.Success($"{ip} : TCP 443 OK");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        log.Warning($"{ip} : TCP 443 TIMEOUT");
                     }
                     catch (Exception ex)
                     {
-                        log.Error(
-                            $"{ip} : {ex.Message}");
+                        log.Error($"{ip} : {ex.Message}");
                     }
                 }
             }

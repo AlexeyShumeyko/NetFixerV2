@@ -6,7 +6,7 @@
         {
             return new HttpClient
             {
-                Timeout = TimeSpan.FromSeconds(10)
+                Timeout = TimeSpan.FromSeconds(5)
             };
         }
     }

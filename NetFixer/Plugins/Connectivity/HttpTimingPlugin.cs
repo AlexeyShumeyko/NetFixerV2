@@ -22,10 +22,10 @@ namespace NetFixer.Plugins.Connectivity
                 var sw =
                     Stopwatch.StartNew();
 
-                var response =
-                    await client.GetAsync(
-                        Targets.HttpsUrl,
-                        token);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
+
+                using var response = await client.GetAsync(Targets.HttpsUrl, cts.Token);
 
                 sw.Stop();
 
@@ -34,6 +34,10 @@ namespace NetFixer.Plugins.Connectivity
 
                 log.Info(
                     $"Response Time: {sw.ElapsedMilliseconds} ms");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("HTTP timing: timeout.");
             }
             catch (Exception ex)
             {

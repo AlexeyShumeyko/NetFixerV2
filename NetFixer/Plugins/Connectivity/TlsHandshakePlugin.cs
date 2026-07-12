@@ -17,39 +17,28 @@ namespace NetFixer.Plugins.Connectivity
 
             try
             {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
                 using var tcp = new TcpClient();
 
-                var connectTask =
-                    tcp.ConnectAsync(Targets.Site, 443);
+                await tcp.ConnectAsync(Targets.Site, 443).WaitAsync(cts.Token);
 
-                var timeoutTask =
-                    Task.Delay(5000, token);
+                using var ssl = new SslStream(
+                    tcp.GetStream(),
+                    false,
+                    (_, _, _, _) => true);
 
-                var completed =
-                    await Task.WhenAny(connectTask, timeoutTask);
+                await ssl.AuthenticateAsClientAsync(Targets.Site).WaitAsync(cts.Token);
 
-                if (completed == timeoutTask)
-                {
-                    log.Error("TCP timeout.");
-                    return;
-                }
-
-                using var ssl =
-                    new SslStream(
-                        tcp.GetStream(),
-                        false,
-                        (_, _, _, _) => true);
-
-                await ssl.AuthenticateAsClientAsync(
-                    Targets.Site);
-
-                log.Success(
-                    $"TLS OK | Protocol: {ssl.SslProtocol}");
+                log.Success($"TLS OK | Protocol: {ssl.SslProtocol}");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("TCP timeout.");
             }
             catch (Exception ex)
             {
-                log.Error(
-                    $"TLS FAILED: {ex.Message}");
+                log.Error($"TLS FAILED: {ex.Message}");
             }
         }
     }

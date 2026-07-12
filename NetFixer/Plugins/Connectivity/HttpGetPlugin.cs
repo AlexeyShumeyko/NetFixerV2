@@ -16,22 +16,22 @@ namespace NetFixer.Plugins.Connectivity
             try
             {
                 using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(10);
 
-                client.Timeout =
-                    TimeSpan.FromSeconds(10);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(10000);
 
-                var response =
-                    await client.GetAsync(
-                        Targets.HttpsUrl,
-                        token);
+                using var response = await client.GetAsync(Targets.HttpsUrl, cts.Token);
 
-                log.Success(
-                    $"GET {(int)response.StatusCode} {response.StatusCode}");
+                log.Success($"GET {(int)response.StatusCode} {response.StatusCode}");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("GET FAILED: Request timeout.");
             }
             catch (Exception ex)
             {
-                log.Error(
-                    $"GET FAILED: {ex.Message}");
+                log.Error($"GET FAILED: {ex.Message}");
             }
         }
     }

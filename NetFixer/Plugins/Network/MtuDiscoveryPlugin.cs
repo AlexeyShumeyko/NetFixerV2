@@ -18,7 +18,7 @@ namespace NetFixer.Plugins.Network
             {
                 var mtu =
                     await DetectOptimalMtu(
-                        log);
+                        log, token);
 
                 if (mtu > 0)
                 {
@@ -37,24 +37,33 @@ namespace NetFixer.Plugins.Network
             }
         }
 
-        private async Task<int> DetectOptimalMtu(
-            ILog log)
+        private async Task<int> DetectOptimalMtu(ILog log, CancellationToken token)
         {
             int low = 1200;
             int high = 1500;
 
             while (low <= high)
             {
-                var mid =
-                    (low + high) / 2;
+                token.ThrowIfCancellationRequested();
 
-                var payload =
-                    mid - 28;
+                var mid = (low + high) / 2;
+                var payload = mid - 28;
 
-                var result =
-                    await CommandExecutor.ExecuteAsync(
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(8000);
+
+                CommandResult result;
+                try
+                {
+                    result = await CommandExecutor.ExecuteAsync(
                         $"ping -f -n 1 -l {payload} {Targets.Site}",
-                        log);
+                        log,
+                        cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return -1;
+                }
 
                 if (IsSuccess(result.Output))
                 {
@@ -66,7 +75,7 @@ namespace NetFixer.Plugins.Network
                 }
             }
 
-            return high;
+            return high > 1200 ? high : -1;
         }
 
         private bool IsSuccess(

@@ -14,10 +14,10 @@ namespace NetFixer.Utils
 
     public static class CommandExecutor
     {
-        public static async Task<CommandResult> ExecuteAsync(string command, ILog log) =>
-            await ExecuteAsync(command, log, logOutput: true, logError: true);
+        public static async Task<CommandResult> ExecuteAsync(string command, ILog log, CancellationToken token = default) =>
+            await ExecuteAsync(command, log, logOutput: true, logError: true, token);
 
-        public static async Task<CommandResult> ExecuteAsync(string command, ILog log, bool logOutput, bool logError)
+        public static async Task<CommandResult> ExecuteAsync(string command, ILog log, bool logOutput, bool logError, CancellationToken token = default)
         {
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
@@ -31,34 +31,62 @@ namespace NetFixer.Utils
                 StandardErrorEncoding = Encoding.UTF8
             };
 
-            var process = new Process { StartInfo = psi };
+            using var process = new Process { StartInfo = psi };
             process.Start();
 
-            var outputTask = process.StandardOutput.ReadToEndAsync();
-            var errorTask = process.StandardError.ReadToEndAsync();
-
-            await Task.WhenAll(outputTask, errorTask);
-
-            var output = await outputTask;
-            var error = await errorTask;
-
-            await process.WaitForExitAsync();
-
-            var result = new CommandResult
+            try
             {
-                Output = output.Trim(),
-                Error = error.Trim(),
-                ExitCode = process.ExitCode
-            };
+                var outputTask = process.StandardOutput.ReadToEndAsync(token);
+                var errorTask = process.StandardError.ReadToEndAsync(token);
 
-            if (logOutput && logError)
-                log.Command(command, result.Output, result.Error, result.ExitCode);
-            else if (!logOutput)
-                log.Command(command, "Reading completed successfully", result.Error, result.ExitCode);
-            else
-                log.Command(command, result.Output, "", result.ExitCode);
+                await Task.WhenAll(outputTask, errorTask).WaitAsync(token);
 
-            return result;
+                var output = await outputTask;
+                var error = await errorTask;
+
+                await process.WaitForExitAsync(token);
+
+                var result = new CommandResult
+                {
+                    Output = output.Trim(),
+                    Error = error.Trim(),
+                    ExitCode = process.ExitCode
+                };
+
+                if (logOutput && logError)
+                    log.Command(command, result.Output, result.Error, result.ExitCode);
+                else if (!logOutput)
+                    log.Command(command, "Reading completed successfully", result.Error, result.ExitCode);
+                else
+                    log.Command(command, result.Output, "", result.ExitCode);
+
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(true); } catch { }
+
+                try
+                {
+                    using var killer = new Process();
+                    killer.StartInfo = new ProcessStartInfo("taskkill", $"/F /T /PID {process.Id}")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false
+                    };
+
+                    killer.Start();
+                    killer.WaitForExit(2000);
+                }
+                catch { }
+
+                return new CommandResult
+                {
+                    Output = "",
+                    Error = "Command timed out",
+                    ExitCode = -1
+                };
+            }
         }
     }
 }

@@ -29,8 +29,7 @@ namespace NetFixer.Plugins.Environment
 
                 foreach (var adapter in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    var lower =
-                        adapter.Description.ToLowerInvariant();
+                    var lower = (adapter.Name + " " + adapter.Description).ToLowerInvariant();
 
                     if (VirtualKeywords.Any(
                         x => lower.Contains(x)))

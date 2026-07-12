@@ -15,45 +15,46 @@ namespace NetFixer.Plugins.Connectivity
 
             try
             {
-                var handler =
-                    new HttpClientHandler
-                    {
-                        AllowAutoRedirect = false
-                    };
+                var handler = new HttpClientHandler
+                {
+                    AllowAutoRedirect = false
+                };
 
-                using var client =
-                    new HttpClient(handler);
-
-                client.Timeout =
-                    TimeSpan.FromSeconds(10);
+                using var client = new HttpClient(handler);
+                client.Timeout = TimeSpan.FromSeconds(5);
 
                 var currentUrl = Targets.HttpsUrl;
 
                 for (var i = 0; i < 10; i++)
                 {
-                    var response =
-                        await client.GetAsync(
-                            currentUrl,
-                            token);
+                    token.ThrowIfCancellationRequested();
 
-                    log.Info(
-                        $"{(int)response.StatusCode} -> {currentUrl}");
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    cts.CancelAfter(5000);
 
-                    if (response.Headers.Location == null)
+                    try
+                    {
+                        using var response = await client.GetAsync(currentUrl, cts.Token);
+
+                        log.Info($"{(int)response.StatusCode} -> {currentUrl}");
+
+                        if (response.Headers.Location == null)
+                            break;
+
+                        currentUrl = response.Headers.Location.ToString();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        log.Warning("Redirect chain: timeout.");
                         break;
-
-                    currentUrl =
-                        response.Headers.Location
-                            .ToString();
+                    }
                 }
 
-                log.Success(
-                    "Redirect chain completed.");
+                log.Success("Redirect chain completed.");
             }
             catch (Exception ex)
             {
-                log.Error(
-                    ex.Message);
+                log.Error(ex.Message);
             }
         }
     }

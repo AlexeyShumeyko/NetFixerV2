@@ -18,7 +18,7 @@ namespace NetFixer.Plugins.Dns
             {
                 await CommandExecutor.ExecuteAsync(
                     $"nslookup -type=A {Targets.Site}",
-                    log);
+                    log, token);
             }
             catch (Exception ex)
             {

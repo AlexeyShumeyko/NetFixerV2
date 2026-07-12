@@ -16,36 +16,29 @@ namespace NetFixer.Plugins.Connectivity
 
             try
             {
-                using var client =
-                    HttpClientFactory.Create();
+                using var client = HttpClientFactory.Create();
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(10000);
 
-                var stopwatch =
-                    Stopwatch.StartNew();
-
-                var response =
-                    await client.GetAsync(
-                        Targets.HttpsUrl,
-                        token);
-
+                var stopwatch = Stopwatch.StartNew();
+                using var response = await client.GetAsync(Targets.HttpsUrl, cts.Token);
                 stopwatch.Stop();
 
-                log.Success(
-                    $"HTTP {(int)response.StatusCode} {response.StatusCode}");
+                log.Success($"HTTP {(int)response.StatusCode} {response.StatusCode}");
+                log.Info($"Response Time: {stopwatch.ElapsedMilliseconds} ms");
 
-                log.Info(
-                    $"Response Time: {stopwatch.ElapsedMilliseconds} ms");
-
-                if (response.Content.Headers.ContentLength
-                    is long length)
+                if (response.Content.Headers.ContentLength is long length)
                 {
-                    log.Info(
-                        $"Content Length: {length} bytes");
+                    log.Info($"Content Length: {length} bytes");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("Site check: Request timeout.");
             }
             catch (Exception ex)
             {
-                log.Error(
-                    ex.Message);
+                log.Error(ex.Message);
             }
         }
     }

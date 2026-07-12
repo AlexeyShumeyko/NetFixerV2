@@ -23,16 +23,20 @@ namespace NetFixer.Plugins.Connectivity
                         HttpMethod.Head,
                         Targets.HttpsUrl);
 
-                var response =
-                    await client.SendAsync(
-                        request,
-                        token);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
+
+                using var response = await client.SendAsync(request, cts.Token);
 
                 foreach (var header in response.Headers)
                 {
                     log.Info(
                         $"{header.Key}: {string.Join(", ", header.Value)}");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("Response headers: timeout.");
             }
             catch (Exception ex)
             {

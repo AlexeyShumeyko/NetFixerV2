@@ -21,20 +21,16 @@ namespace NetFixer.Plugins.Routing
                     .Instance
                     .ResolvedAddresses;
 
-                using var ping =
-                    new Ping();
-
                 foreach (var ip in addresses)
                 {
                     try
                     {
-                        var reply =
-                            await ping.SendPingAsync(
-                                ip,
-                                3000);
+                        using var ping = new Ping();
 
-                        if (reply.Status ==
-                            IPStatus.Success)
+                        var reply =
+                            await ping.SendPingAsync(ip, 3000);
+
+                        if (reply.Status == IPStatus.Success)
                         {
                             log.Success(
                                 $"{ip} -> {reply.RoundtripTime} ms");

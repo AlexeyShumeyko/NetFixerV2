@@ -24,12 +24,32 @@ namespace NetFixer.Plugins.Security
                     CreateNoWindow = true
                 };
 
-                using var process =
-                    Process.Start(psi);
+                using var process = Process.Start(psi);
 
-                var output =
-                    await process!.StandardOutput
-                        .ReadToEndAsync(token);
+                if (process == null) 
+                {
+                    log.Error("Не удалось запустить netsh");
+
+                    return;
+                }
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
+
+                string output;
+
+                try
+                {
+                    output = await process.StandardOutput.ReadToEndAsync(cts.Token);
+                    await process.WaitForExitAsync(cts.Token);
+                }
+                catch (OperationCanceledException) 
+                {
+                    try { process.Kill(true); } catch { }
+                    log.Error("Firewall check: timeout.");
+
+                    return;
+                }
 
                 if (output.Contains("ON"))
                 {

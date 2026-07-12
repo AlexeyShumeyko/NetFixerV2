@@ -58,7 +58,7 @@ async Task RunV3Diagnostics()
                         try
                         {
                             using var cts = CancellationTokenSource.CreateLinkedTokenSource(CancellationToken.None);
-                            cts.CancelAfter(TimeSpan.FromSeconds(10));
+                            cts.CancelAfter(TimeSpan.FromSeconds(35));
                             await plugin.ExecuteAsync(v3Adapter, cts.Token);
                         }
                         catch (Exception ex)
@@ -69,7 +69,7 @@ async Task RunV3Diagnostics()
 
                     while (!run.IsCompleted)
                     {
-                        await Task.Delay(100);
+                        await Task.Delay(200);
                         if (pluginTask.Value < 0.95) pluginTask.Increment(0.01);
                     }
 

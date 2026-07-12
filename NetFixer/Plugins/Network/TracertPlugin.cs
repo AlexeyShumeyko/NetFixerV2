@@ -19,7 +19,7 @@ namespace NetFixer.Plugins.Network
                 var result =
                     await CommandExecutor.ExecuteAsync(
                         $"tracert -d {Targets.Site}",
-                        log);
+                        log, token);
 
                 if (result.IsSuccess)
                 {

@@ -27,29 +27,28 @@ namespace NetFixer.Plugins.Routing
                 {
                     try
                     {
-                        using var tcp =
-                            new TcpClient();
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        cts.CancelAfter(5000);
+                        using var tcp = new TcpClient();
 
-                        await tcp.ConnectAsync(
-                            ip,
-                            443);
+                        await tcp.ConnectAsync(ip, 443).WaitAsync(cts.Token);
 
-                        using var ssl =
-                            new SslStream(
-                                tcp.GetStream(),
-                                false,
-                                (_, _, _, _) => true);
+                        using var ssl = new SslStream(
+                            tcp.GetStream(),
+                            false,
+                            (_, _, _, _) => true);
 
-                        await ssl.AuthenticateAsClientAsync(
-                            Targets.Site);
+                        await ssl.AuthenticateAsClientAsync(Targets.Site).WaitAsync(cts.Token);
 
-                        log.Success(
-                            $"{ip} -> TLS OK");
+                        log.Success($"{ip} -> TLS OK");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        log.Warning($"{ip} -> TLS TIMEOUT");
                     }
                     catch (Exception ex)
                     {
-                        log.Warning(
-                            $"{ip} -> TLS FAIL: {ex.Message}");
+                        log.Warning($"{ip} -> TLS FAIL: {ex.Message}");
                     }
                 }
             }

@@ -11,7 +11,7 @@ namespace NetFixer.Plugins.Network
         {
             log.StartPluginGroup(Name);
 
-            var result = await CommandExecutor.ExecuteAsync("netsh winsock reset", log);
+            var result = await CommandExecutor.ExecuteAsync("netsh winsock reset", log, token);
 
             if (result.Output.Contains("Successfully reset") ||
                 result.Output.Contains("успешно сброшен") ||

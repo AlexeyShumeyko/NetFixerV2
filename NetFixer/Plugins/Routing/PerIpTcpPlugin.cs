@@ -25,31 +25,18 @@ namespace NetFixer.Plugins.Routing
                 {
                     try
                     {
-                        using var client =
-                            new TcpClient();
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        cts.CancelAfter(5000);
+                        using var client = new TcpClient();
 
-                        var connectTask =
-                            client.ConnectAsync(
-                                ip,
-                                443);
-
-                        var completed =
-                            await Task.WhenAny(
-                                connectTask,
-                                Task.Delay(
-                                    5000,
-                                    token));
-
-                        if (completed ==
-                            connectTask)
+                        try
                         {
-                            log.Success(
-                                $"{ip} -> TCP OK");
+                            await client.ConnectAsync(ip, 443).WaitAsync(cts.Token);
+                            log.Success($"{ip} -> TCP OK");
                         }
-                        else
+                        catch (OperationCanceledException)
                         {
-                            log.Warning(
-                                $"{ip} -> TCP TIMEOUT");
+                            log.Warning($"{ip} -> TCP TIMEOUT");
                         }
                     }
                     catch (Exception ex)

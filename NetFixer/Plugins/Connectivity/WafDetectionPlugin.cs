@@ -18,10 +18,10 @@ namespace NetFixer.Plugins.Connectivity
                 using var client =
                     HttpClientFactory.Create();
 
-                var response =
-                    await client.GetAsync(
-                        Targets.HttpsUrl,
-                        token);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
+
+                using var response = await client.GetAsync(Targets.HttpsUrl, cts.Token);
 
                 foreach (var header in response.Headers)
                 {
@@ -42,6 +42,10 @@ namespace NetFixer.Plugins.Connectivity
                             $"{header.Key}: {value}");
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("WAF detection: timeout.");
             }
             catch (Exception ex)
             {

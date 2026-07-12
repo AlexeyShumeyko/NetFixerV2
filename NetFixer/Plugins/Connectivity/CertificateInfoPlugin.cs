@@ -18,40 +18,30 @@ namespace NetFixer.Plugins.Connectivity
 
             try
             {
-                using var tcp =
-                    new TcpClient();
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
+                using var tcp = new TcpClient();
 
-                await tcp.ConnectAsync(
-                    Targets.Site,
-                    443);
+                await tcp.ConnectAsync(Targets.Site, 443).WaitAsync(cts.Token);
 
-                using var ssl =
-                    new SslStream(
-                        tcp.GetStream(),
-                        false,
-                        (_, _, _, _) => true);
+                using var ssl = new SslStream(
+                    tcp.GetStream(),
+                    false,
+                    (_, _, _, _) => true);
 
-                await ssl.AuthenticateAsClientAsync(
-                    Targets.Site);
+                await ssl.AuthenticateAsClientAsync(Targets.Site).WaitAsync(cts.Token);
 
-                var cert =
-                    new X509Certificate2(
-                        ssl.RemoteCertificate!);
+                var cert = new X509Certificate2(ssl.RemoteCertificate!);
 
-                log.Info(
-                    $"Subject: {cert.Subject}");
-
-                log.Info(
-                    $"Issuer: {cert.Issuer}");
-
-                log.Info(
-                    $"Not Before: {cert.NotBefore}");
-
-                log.Info(
-                    $"Not After: {cert.NotAfter}");
-
-                log.Info(
-                    $"Thumbprint: {cert.Thumbprint}");
+                log.Info($"Subject: {cert.Subject}");
+                log.Info($"Issuer: {cert.Issuer}");
+                log.Info($"Not Before: {cert.NotBefore}");
+                log.Info($"Not After: {cert.NotAfter}");
+                log.Info($"Thumbprint: {cert.Thumbprint}");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("Certificate: TCP timeout.");
             }
             catch (Exception ex)
             {

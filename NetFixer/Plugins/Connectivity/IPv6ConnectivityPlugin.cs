@@ -33,32 +33,16 @@ namespace NetFixer.Plugins.Connectivity
                 {
                     try
                     {
-                        using var tcp =
-                            new TcpClient(AddressFamily.InterNetworkV6);
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        cts.CancelAfter(5000);
+                        using var tcp = new TcpClient(AddressFamily.InterNetworkV6);
 
-                        var connectTask =
-                            tcp.ConnectAsync(ip, 443);
-
-                        var timeoutTask =
-                            Task.Delay(5000, token);
-
-                        var completed =
-                            await Task.WhenAny(connectTask, timeoutTask);
-
-                        if (completed == timeoutTask)
-                        {
-                            log.Warning($"IPv6 {ip} : TIMEOUT");
-                            continue;
-                        }
-
-                        if (tcp.Connected)
-                        {
-                            log.Success($"IPv6 {ip} : OK");
-                        }
-                        else
-                        {
-                            log.Error($"IPv6 {ip} : FAILED");
-                        }
+                        await tcp.ConnectAsync(ip, 443).WaitAsync(cts.Token);
+                        log.Success($"IPv6 {ip} : OK");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        log.Warning($"IPv6 {ip} : TIMEOUT");
                     }
                     catch (Exception ex)
                     {

@@ -13,7 +13,7 @@ namespace NetFixer.Plugins.Dns
 
             await Task.Delay(500);
 
-            var result = await CommandExecutor.ExecuteAsync("ipconfig /flushdns", log);
+            var result = await CommandExecutor.ExecuteAsync("ipconfig /flushdns", log, token);
 
             if (result.IsSuccess)
                 log.Success("DNS-кеш успешно очищен");

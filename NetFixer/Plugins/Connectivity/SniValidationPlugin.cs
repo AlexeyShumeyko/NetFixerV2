@@ -17,27 +17,28 @@ namespace NetFixer.Plugins.Connectivity
 
             try
             {
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
                 using var tcp = new TcpClient();
 
-                await tcp.ConnectAsync(
-                    Targets.Site,
-                    443);
+                await tcp.ConnectAsync(Targets.Site, 443).WaitAsync(cts.Token);
 
                 using var ssl = new SslStream(
                     tcp.GetStream(),
                     false,
                     (_, _, _, _) => true);
 
-                await ssl.AuthenticateAsClientAsync(
-                    Targets.Site);
+                await ssl.AuthenticateAsClientAsync(Targets.Site).WaitAsync(cts.Token);
 
-                log.Success(
-                    $"SNI OK ({ssl.SslProtocol})");
+                log.Success($"SNI OK ({ssl.SslProtocol})");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("SNI FAILED: TCP timeout.");
             }
             catch (Exception ex)
             {
-                log.Error(
-                    $"SNI FAILED: {ex.Message}");
+                log.Error($"SNI FAILED: {ex.Message}");
             }
         }
     }

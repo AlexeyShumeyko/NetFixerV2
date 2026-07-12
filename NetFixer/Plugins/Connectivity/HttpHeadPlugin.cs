@@ -16,27 +16,24 @@ namespace NetFixer.Plugins.Connectivity
             try
             {
                 using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromSeconds(10);
 
-                client.Timeout =
-                    TimeSpan.FromSeconds(10);
+                using var request = new HttpRequestMessage(HttpMethod.Head, Targets.HttpsUrl);
 
-                using var request =
-                    new HttpRequestMessage(
-                        HttpMethod.Head,
-                        Targets.HttpsUrl);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(10000);
 
-                var response =
-                    await client.SendAsync(
-                        request,
-                        token);
+                using var response = await client.SendAsync(request, cts.Token);
 
-                log.Success(
-                    $"HEAD {(int)response.StatusCode} {response.StatusCode}");
+                log.Success($"HEAD {(int)response.StatusCode} {response.StatusCode}");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("HEAD FAILED: Request timeout.");
             }
             catch (Exception ex)
             {
-                log.Error(
-                    $"HEAD FAILED: {ex.Message}");
+                log.Error($"HEAD FAILED: {ex.Message}");
             }
         }
     }

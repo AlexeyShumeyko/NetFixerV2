@@ -39,8 +39,7 @@ namespace NetFixer.Plugins.Environment
 
                 foreach (var adapter in NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    var lower =
-                        adapter.Name.ToLowerInvariant();
+                    var lower = (adapter.Name + " " + adapter.Description).ToLowerInvariant();
 
                     if (VpnKeywords.Any(
                         x => lower.Contains(x)))

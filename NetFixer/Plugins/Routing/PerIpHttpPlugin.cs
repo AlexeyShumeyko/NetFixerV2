@@ -26,48 +26,35 @@ namespace NetFixer.Plugins.Routing
                 {
                     try
                     {
-                        var handler =
-                            new SocketsHttpHandler
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        cts.CancelAfter(5000);
+
+                        var handler = new SocketsHttpHandler
+                        {
+                            ConnectCallback = async (ctx, ct) =>
                             {
-                                ConnectCallback =
-                                    async (ctx, ct) =>
-                                    {
-                                        var socket =
-                                            new Socket(
-                                                ip.AddressFamily,
-                                                SocketType.Stream,
-                                                ProtocolType.Tcp);
+                                using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
+                                var socket = new Socket(ip.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                                await socket.ConnectAsync(ip, 443, linked.Token);
+                                return new NetworkStream(socket, ownsSocket: true);
+                            }
+                        };
 
-                                        await socket.ConnectAsync(
-                                            ip,
-                                            443,
-                                            ct);
+                        using var client = new HttpClient(handler);
+                        client.DefaultRequestHeaders.Host = Targets.Site;
+                        client.Timeout = TimeSpan.FromSeconds(5);
 
-                                        return new NetworkStream(
-                                            socket,
-                                            ownsSocket: true);
-                                    }
-                            };
+                        using var response = await client.GetAsync($"https://{Targets.Site}", cts.Token);
 
-                        using var client =
-                            new HttpClient(
-                                handler);
-
-                        client.DefaultRequestHeaders.Host =
-                            Targets.Site;
-
-                        var response =
-                            await client.GetAsync(
-                                $"https://{Targets.Site}",
-                                token);
-
-                        log.Success(
-                            $"{ip} -> {(int)response.StatusCode}");
+                        log.Success($"{ip} -> {(int)response.StatusCode}");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        log.Warning($"{ip} -> HTTP TIMEOUT");
                     }
                     catch (Exception ex)
                     {
-                        log.Warning(
-                            $"{ip} -> HTTP FAIL: {ex.Message}");
+                        log.Warning($"{ip} -> HTTP FAIL: {ex.Message}");
                     }
                 }
             }

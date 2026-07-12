@@ -18,13 +18,17 @@ namespace NetFixer.Plugins.Connectivity
                 using var client =
                     HttpClientFactory.Create();
 
-                var response =
-                    await client.GetAsync(
-                        Targets.HttpsUrl,
-                        token);
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                cts.CancelAfter(5000);
+
+                using var response = await client.GetAsync(Targets.HttpsUrl, cts.Token);
 
                 log.Info(
                     $"HTTP/{response.Version}");
+            }
+            catch (OperationCanceledException)
+            {
+                log.Error("HTTP version: timeout.");
             }
             catch (Exception ex)
             {

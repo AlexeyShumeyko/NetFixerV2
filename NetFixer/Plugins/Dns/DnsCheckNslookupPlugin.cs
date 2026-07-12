@@ -10,8 +10,7 @@ namespace NetFixer.Plugins.Dns
         private readonly List<string> _domain = new()
         {
             "fabrika-fotoknigi.com",
-            "online.fabrika-fotoknigi.com",
-            "new.fabrika-fotoknigi.com"
+            "online.fabrika-fotoknigi.com"
         };
 
         public async Task ExecuteAsync(ILog log, CancellationToken token)
@@ -20,7 +19,7 @@ namespace NetFixer.Plugins.Dns
 
             foreach (var domain in _domain)
             {
-                var result = await CommandExecutor.ExecuteAsync($"nslookup {domain}", log);
+                var result = await CommandExecutor.ExecuteAsync($"nslookup {domain}", log, token);
 
                 if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Output))
                     log.Success($"Резолвинг успешен: {domain}");

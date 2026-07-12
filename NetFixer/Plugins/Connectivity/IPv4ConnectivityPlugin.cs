@@ -33,30 +33,16 @@ namespace NetFixer.Plugins.Connectivity
                 {
                     try
                     {
+                        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        cts.CancelAfter(5000);
                         using var tcp = new TcpClient(AddressFamily.InterNetwork);
 
-                        var connectTask = tcp.ConnectAsync(ip, 443);
-
-                        var timeoutTask =
-                            Task.Delay(5000, token);
-
-                        var completed =
-                            await Task.WhenAny(connectTask, timeoutTask);
-
-                        if (completed == timeoutTask)
-                        {
-                            log.Warning($"IPv4 {ip} : TIMEOUT");
-                            continue;
-                        }
-
-                        if (tcp.Connected)
-                        {
-                            log.Success($"IPv4 {ip} : OK");
-                        }
-                        else
-                        {
-                            log.Error($"IPv4 {ip} : FAILED");
-                        }
+                        await tcp.ConnectAsync(ip, 443).WaitAsync(cts.Token);
+                        log.Success($"IPv4 {ip} : OK");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        log.Warning($"IPv4 {ip} : TIMEOUT");
                     }
                     catch (Exception ex)
                     {

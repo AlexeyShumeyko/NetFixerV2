@@ -6,10 +6,7 @@ namespace NetFixer.Plugins.Environment
     {
         private readonly INetFixPlugin[] _plugins =
             [
-                new PublicIpPlugin(),
-                new GeoIpPlugin(),
-                new ProviderPlugin(),
-                new AsnPlugin(),
+                new IpInfoPlugin(),
                 new LocalNetworkInfoPlugin(),
                 new NetworkAdapterPlugin(),
                 new VpnDetectionPlugin(),
